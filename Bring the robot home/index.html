@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมส์โค้ดดิ้ง 5 ด่าน (มีเกียรติบัตร) - โรงเรียนบ้านใหม่วัฒนา</title>
+    <style>
+        /* --- CSS หลัก --- */
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #e0f7fa;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .logo { max-width: 120px; height: auto; margin-bottom: 5px; }
+        .teacher-info { font-size: 18px; color: #004d40; font-weight: bold; margin: 5px 0; }
+        h1 { color: #006064; margin: 5px 0 10px 0; font-size: 24px; }
+
+        /* ป้ายบอกด่าน */
+        .level-badge {
+            background-color: #ff6f00; color: white; padding: 5px 20px;
+            border-radius: 20px; font-weight: bold; font-size: 20px;
+            margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: inline-block;
+        }
+
+        /* กล่องเกม */
+        .game-container {
+            display: flex; justify-content: center; gap: 15px;
+            margin-top: 5px; flex-wrap: wrap; width: 100%; max-width: 900px;
+        }
+
+        .workspace-panel {
+            width: 280px; background: #ffffff; border: 4px solid #4dd0e1;
+            border-radius: 15px; padding: 10px; display: flex; flex-direction: column;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .toolbox {
+            background: #e0f2f1; padding: 10px; border-radius: 10px;
+            margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;
+        }
+
+        .cmd-btn {
+            padding: 12px; color: white; font-weight: bold; border-radius: 12px;
+            cursor: pointer; text-align: center; font-size: 18px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2); border: none; width: 100%; outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .cmd-btn * { pointer-events: none; }
+        .cmd-btn:active { transform: translateY(4px); box-shadow: none; }
+        .btn-move { background-color: #29b6f6; border-bottom: 4px solid #0288d1; }
+        .btn-left { background-color: #ffa726; border-bottom: 4px solid #f57c00; }
+        .btn-right { background-color: #ffa726; border-bottom: 4px solid #f57c00; }
+
+        .program-header {
+            background-color: #00bcd4; color: white; padding: 8px;
+            border-radius: 8px 8px 0 0; font-weight: bold; margin-top: 5px;
+        }
+
+        .program-area {
+            background: #fafafa; flex-grow: 1; height: 280px; padding: 10px;
+            border: 2px dashed #b2bec3; border-radius: 0 0 8px 8px;
+            overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+
+        .program-block {
+            width: 90%; padding: 8px; color: white; border-radius: 8px;
+            font-size: 14px; text-align: center; cursor: pointer; position: relative;
+            animation: popIn 0.3s;
+        }
+        .program-block::after { content: "❌"; position: absolute; right: 10px; font-size: 10px; opacity: 0.7; }
+        @keyframes popIn { from { transform: scale(0.5); } to { transform: scale(1); } }
+
+        .display-panel {
+            background: #fff; padding: 15px; border-radius: 15px; border: 4px solid #4dd0e1;
+        }
+
+        #grid {
+            display: grid; grid-template-columns: repeat(5, 55px); grid-template-rows: repeat(5, 55px);
+            gap: 2px; background-color: #cfd8dc; border: 4px solid #607d8b;
+        }
+
+        .cell {
+            width: 55px; height: 55px; background-color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; position: relative;
+        }
+
+        .wall { background-color: #546e7a; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, #455a64 5px, #455a64 10px); }
+        .goal { background-color: #ffe0b2; }
+        
+        .robot-arrow {
+            position: absolute; bottom: 2px; right: 2px; font-size: 12px;
+            background: white; border-radius: 50%; width: 15px; height: 15px;
+            display: flex; align-items: center; justify-content: center; border: 1px solid #ccc;
+        }
+
+        .controls { margin-bottom: 10px; background: white; padding: 8px; border-radius: 50px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .control-btn { padding: 8px 20px; font-size: 16px; border: none; border-radius: 20px; cursor: pointer; margin: 0 5px; font-weight: bold; color: white; }
+        .btn-run { background-color: #66bb6a; }
+        .btn-reset { background-color: #ef5350; }
+        .btn-clear { background-color: #ffca28; color: #333; }
+        .running-active { border: 3px solid #d50000 !important; transform: scale(1.05); z-index: 100; }
+
+        /* --- ส่วนหน้าจอเกียรติบัตร (เพิ่มใหม่) --- */
+        .overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        
+        .cert-box {
+            background: white; padding: 30px; border-radius: 20px;
+            text-align: center; border: 10px solid #fdd835;
+            max-width: 500px; width: 90%;
+            animation: popIn 0.5s;
+        }
+
+        .cert-title { color: #f57f17; font-size: 30px; margin-bottom: 10px; }
+        .cert-input {
+            padding: 10px; font-size: 18px; border-radius: 5px; border: 2px solid #ccc;
+            width: 80%; margin: 10px 0; font-family: 'Sarabun';
+        }
+        .cert-btn {
+            background: #4caf50; color: white; border: none; padding: 10px 30px;
+            font-size: 18px; border-radius: 30px; cursor: pointer; margin-top: 10px;
+        }
+
+        /* ดีไซน์เกียรติบัตรจริง */
+        #final-certificate {
+            display: none; /* ซ่อนก่อน รอใส่ชื่อ */
+            border: 5px double #ffb300; padding: 20px; margin-top: 20px;
+            background: #fffde7; position: relative;
+        }
+        #final-certificate h2 { color: #d84315; margin: 10px 0; font-size: 28px; }
+        #final-certificate h3 { color: #0277bd; margin: 5px 0; font-size: 22px; }
+        #final-certificate p { color: #555; margin: 5px 0; font-size: 16px; }
+        .star-icon { font-size: 40px; color: gold; text-shadow: 2px 2px 2px rgba(0,0,0,0.2); }
+
+    </style>
+</head>
+<body onclick="initAudio()"> 
+
+    <img src="logo.png" alt="School Logo" class="logo" onerror="this.style.display='none'"> 
+    <p class="teacher-info">ครูผู้สอน ครูขันทอง โพธิ์เตี้ย, โรงเรียนบ้านใหม่วัฒนา</p>
+    <h1>🤖 เกมส์พาหุ่นยนต์กลับบ้าน</h1>
+
+    <div class="level-badge" id="level-display">ด่านที่ 1 / 5</div>
+
+    <div class="controls">
+        <button class="control-btn btn-run" onclick="runCode()">▶️ เริ่มทำงาน</button>
+        <button class="control-btn btn-reset" onclick="resetGame()">🔄 เริ่มใหม่</button>
+        <button class="control-btn btn-clear" onclick="clearProgram()">🗑️ ล้างคำสั่ง</button>
+    </div>
+
+    <div class="game-container">
+        <div class="workspace-panel">
+            <h3 style="margin:5px 0;">👇 เพิ่มคำสั่ง</h3>
+            <div class="toolbox">
+                <button class="cmd-btn btn-move" onclick="addToProgram('move', 'เดินหน้า', this)">⬆️ เดินหน้า</button>
+                <button class="cmd-btn btn-left" onclick="addToProgram('left', 'หันซ้าย', this)">⬅️ หันซ้าย</button>
+                <button class="cmd-btn btn-right" onclick="addToProgram('right', 'หันขวา', this)">➡️ หันขวา</button>
+            </div>
+            <div class="program-header">📜 โปรแกรมของฉัน</div>
+            <div id="program-area" class="program-area">
+                <div id="empty-msg" style="color: #aaa; margin-top: 50px; font-size: 14px;">(วางคำสั่งที่นี่)</div>
+            </div>
+        </div>
+
+        <div class="display-panel">
+            <div id="grid"></div>
+        </div>
+    </div>
+
+    <div id="victory-overlay" class="overlay">
+        <div class="cert-box">
+            <div id="input-section">
+                <div class="star-icon">⭐⭐⭐</div>
+                <h1 class="cert-title">ภารกิจสำเร็จครบ 5 ด่าน!</h1>
+                <p>เก่งมาก! กรุณาพิมพ์ชื่อเพื่อรับเกียรติบัตร</p>
+                <input type="text" id="student-name" class="cert-input" placeholder="พิมพ์ชื่อ-นามสกุล ที่นี่...">
+                <br>
+                <button class="cert-btn" onclick="generateCertificate()">ยืนยันรับเกียรติบัตร</button>
+            </div>
+
+            <div id="final-certificate">
+                <div class="star-icon">🏆</div>
+                <h2>เกียรติบัตรจบหลักสูตร</h2>
+                <p>Coding Robot Adventure</p>
+                <hr style="border: 1px solid #ffca28; width: 50%;">
+                <p>ขอมอบให้แก่</p>
+                <h3 id="cert-name-display">เด็กชาย รักเรียน เพียรศึกษา</h3>
+                <p>ได้ผ่านด่านทดสอบการเขียนโปรแกรมเบื้องต้นสำเร็จ</p>
+                <div style="margin-top: 20px; font-size: 14px; color: #333;">
+                    <p><strong>ครูขันทอง โพธิ์เตี้ย</strong></p>
+                    <p>โรงเรียนบ้านใหม่วัฒนา</p>
+                    <p style="font-size: 12px; color: #999;">(แคปหน้าจอนี้เพื่อส่งครู)</p>
+                </div>
+                <button class="cert-btn" style="background:#f44336; margin-top:10px; font-size:14px;" onclick="location.reload()">เล่นใหม่อีกครั้ง</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. ระบบเสียง ---
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+        function playSound(type) {
+            if (!audioCtx) initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(400, now);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.1);
+                osc.start(); osc.stop(now+0.1);
+            } else if (type === 'move') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(600, now+0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.1);
+                osc.start(); osc.stop(now+0.1);
+            } else if (type === 'crash') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.linearRampToValueAtTime(50, now+0.3);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now+0.3);
+                osc.start(); osc.stop(now+0.3);
+            } else if (type === 'win') {
+                playNote(523,0,0.1); playNote(659,0.1,0.1); playNote(784,0.2,0.2); playNote(1046,0.4,0.4);
+            } else if (type === 'fanfare') { // เสียงจบเกม (เพิ่มใหม่)
+                playNote(523,0,0.2); playNote(523,0.2,0.2); playNote(523,0.4,0.2); playNote(659,0.6,0.4); playNote(784,1.0,0.4);
+            } else if (type === 'delete') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(200, now);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.1);
+                osc.start(); osc.stop(now+0.1);
+            }
+        }
+        function playNote(freq, st, dur) {
+            const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            o.type = 'triangle'; o.frequency.value = freq;
+            g.gain.setValueAtTime(0.1, audioCtx.currentTime+st); g.gain.linearRampToValueAtTime(0, audioCtx.currentTime+st+dur);
+            o.start(audioCtx.currentTime+st); o.stop(audioCtx.currentTime+st+dur);
+        }
+
+        // --- 2. ข้อมูลด่าน (5 Levels) ---
+        const allLevels = [
+            [[1,0,0,3,0],[0,3,0,3,0],[0,3,0,0,0],[0,0,0,3,0],[3,3,3,3,2]], // L1
+            [[1,0,0,0,3],[3,3,3,0,3],[0,0,0,0,3],[0,3,3,3,3],[0,0,0,0,2]], // L2
+            [[1,3,2,0,0],[0,3,3,3,0],[0,0,0,0,0],[3,3,3,3,0],[0,0,0,0,0]], // L3
+            [[1,0,3,2,3],[3,0,3,0,3],[3,0,0,0,0],[3,3,3,3,0],[0,0,0,0,0]], // L4
+            [[1,0,0,0,0],[3,3,3,3,0],[0,0,0,0,0],[0,3,3,3,3],[0,0,0,0,2]]  // L5
+        ];
+
+        let currentLevelIndex = 0;
+        let gridSize = 5;
+        let robotX = 0, robotY = 0, robotDir = 1;
+
+        // --- 3. ฟังก์ชันเกม ---
+        function resetGame() {
+            const mapData = allLevels[currentLevelIndex];
+            for(let y=0; y<gridSize; y++) {
+                for(let x=0; x<gridSize; x++) {
+                    if(mapData[y][x] === 1) { robotX = x; robotY = y; }
+                }
+            }
+            robotDir = 1;
+            document.getElementById('level-display').innerText = `ด่านที่ ${currentLevelIndex + 1} / ${allLevels.length}`;
+            createGrid();
+        }
+
+        function createGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            const mapData = allLevels[currentLevelIndex];
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'cell'; cell.id = `cell-${x}-${y}`;
+                    if (mapData[y][x] === 3) cell.classList.add('wall');
+                    else if (mapData[y][x] === 2) { cell.classList.add('goal'); cell.innerHTML = '🚩'; }
+                    grid.appendChild(cell);
+                }
+            }
+            drawRobot();
+        }
+
+        function drawRobot() {
+            document.querySelectorAll('.cell').forEach(c => {
+                if(c.innerHTML.includes('🤖')) {
+                    c.innerHTML = c.innerHTML.replace('🤖', '');
+                    const arrow = c.querySelector('.robot-arrow'); if(arrow) arrow.remove();
+                    if(c.classList.contains('goal')) c.innerHTML = '🚩';
+                }
+            });
+            const cell = document.getElementById(`cell-${robotX}-${robotY}`);
+            if(cell) {
+                let arrowIcon = '➡️';
+                if(robotDir === 0) arrowIcon = '⬆️'; if(robotDir === 2) arrowIcon = '⬇️'; if(robotDir === 3) arrowIcon = '⬅️';
+                cell.innerHTML += `🤖<div class="robot-arrow">${arrowIcon}</div>`;
+            }
+        }
+
+        function addToProgram(cmd, text, btn) {
+            playSound('click');
+            if(btn) { btn.style.transform = "scale(0.95)"; setTimeout(()=> btn.style.transform = "scale(1)", 100); }
+            const area = document.getElementById('program-area');
+            document.getElementById('empty-msg').style.display = 'none';
+            const newBlock = document.createElement('div');
+            newBlock.className = 'program-block'; newBlock.innerText = text; newBlock.setAttribute('data-cmd', cmd);
+            if(cmd === 'move') newBlock.style.backgroundColor = '#29b6f6'; else newBlock.style.backgroundColor = '#ffa726';
+            newBlock.onclick = function() {
+                playSound('delete'); this.remove();
+                if(area.children.length <= 1) document.getElementById('empty-msg').style.display = 'block';
+            };
+            area.appendChild(newBlock);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function clearProgram() {
+            playSound('delete');
+            const area = document.getElementById('program-area');
+            area.querySelectorAll('.program-block').forEach(b => b.remove());
+            document.getElementById('empty-msg').style.display = 'block';
+        }
+
+        // --- 4. ฟังก์ชันเกียรติบัตร (New) ---
+        function showVictoryScreen() {
+            playSound('fanfare');
+            document.getElementById('victory-overlay').style.display = 'flex';
+        }
+
+        function generateCertificate() {
+            const name = document.getElementById('student-name').value;
+            if(name.trim() === "") {
+                alert("กรุณาพิมพ์ชื่อก่อนรับเกียรติบัตรครับ");
+                return;
+            }
+            playSound('win');
+            document.getElementById('input-section').style.display = 'none';
+            document.getElementById('cert-name-display').innerText = name;
+            document.getElementById('final-certificate').style.display = 'block';
+        }
+
+        // --- 5. รันเกม ---
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        async function runCode() {
+            resetGame();
+            await sleep(500);
+            const blocks = document.querySelectorAll('.program-block');
+            if(blocks.length === 0) { alert("ยังไม่มีคำสั่งครับ!"); return; }
+            const mapData = allLevels[currentLevelIndex];
+
+            for (let block of blocks) {
+                const cmd = block.getAttribute('data-cmd');
+                block.classList.add('running-active');
+                
+                if (cmd === 'left') { robotDir--; if(robotDir < 0) robotDir = 3; playSound('move'); } 
+                else if (cmd === 'right') { robotDir++; if(robotDir > 3) robotDir = 0; playSound('move'); } 
+                else if (cmd === 'move') {
+                    let nextX = robotX, nextY = robotY;
+                    if (robotDir === 0) nextY--; if (robotDir === 1) nextX++; 
+                    if (robotDir === 2) nextY++; if (robotDir === 3) nextX--; 
+
+                    if (nextX >= 0 && nextX < gridSize && nextY >= 0 && nextY < gridSize && mapData[nextY][nextX] !== 3) {
+                        robotX = nextX; robotY = nextY; playSound('move');
+                    } else {
+                        playSound('crash');
+                        const crash = document.getElementById(`cell-${nextX}-${nextY}`);
+                        if(crash) {
+                            crash.style.backgroundColor = '#ffcdd2';
+                            setTimeout(() => { 
+                                if(crash.classList.contains('wall')) crash.style.backgroundColor = ''; 
+                                else crash.style.backgroundColor = '#fff'; 
+                            }, 300);
+                        }
+                    }
+                }
+                drawRobot(); await sleep(600);
+                block.classList.remove('running-active');
+
+                if (mapData[robotY][robotX] === 2) {
+                    playSound('win');
+                    await sleep(500);
+                    
+                    if (currentLevelIndex < allLevels.length - 1) {
+                        alert(`🎉 ยอดเยี่ยม! ผ่านด่าน ${currentLevelIndex + 1} แล้ว`);
+                        currentLevelIndex++; 
+                        clearProgram(); resetGame();
+                    } else {
+                        // จบด่าน 5 แสดงหน้าเกียรติบัตร
+                        showVictoryScreen();
+                    }
+                    return;
+                }
+            }
+        }
+        resetGame();
+    </script>
+</body>
+</html>
+ 
